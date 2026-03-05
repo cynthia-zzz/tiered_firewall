@@ -4,6 +4,7 @@
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <linux/in.h>
+#include <bpf/bpf_endian.h>
 
 char LICENSE[] SEC("license") = "GPL";
 
@@ -63,7 +64,7 @@ struct {
 counters[0] = syn_seen
 counters[1] = solicited
 counters[2] = unsolicited
-counters[3] = other_tcp
+counters[3] = other_tcp -> packets_seen_any
 */
 
 static __always_inline void counter_inc(__u32 idx) {
@@ -128,7 +129,7 @@ int xdp_tcp_bloom(struct xdp_md *ctx)
     if ((void *)(eth + 1) > data_end)
         return XDP_PASS;
 
-    if (eth->h_proto != __constant_htons(ETH_P_IP))
+    if (eth->h_proto != bpf_htons(ETH_P_IP))
         return XDP_PASS;
 
     struct iphdr *ip = (void *)(eth + 1);
@@ -141,6 +142,9 @@ int xdp_tcp_bloom(struct xdp_md *ctx)
     struct tcphdr *tcp = (void *)ip + (ip->ihl * 4);
     if ((void *)(tcp + 1) > data_end)
         return XDP_PASS;
+
+    if (ip->ihl < 5)
+	return XDP_PASS;
 
     struct flow5 f = {};
     f.src_ip = ip->saddr;
@@ -157,18 +161,22 @@ int xdp_tcp_bloom(struct xdp_md *ctx)
     }
 
     /* Reverse flow */
-    struct flow5 rev = {};
-    rev.src_ip = f.dst_ip;
-    rev.dst_ip = f.src_ip;
-    rev.src_port = f.dst_port;
-    rev.dst_port = f.src_port;
-    rev.proto = IPPROTO_TCP;
+    if (tcp->syn && tcp->ack) {
+	/* Reverse flow: client->server tuple that should have been seen as SYN */
+    	struct flow5 rev = {};
+    	rev.src_ip = f.dst_ip;
+    	rev.dst_ip = f.src_ip;
+    	rev.src_port = f.dst_port;
+    	rev.dst_port = f.src_port;
+    	rev.proto = IPPROTO_TCP;
 
-    if (bloom_contains(&rev)) {
-        counter_inc(1);  // solicited
+    	if (bloom_contains(&rev)) {
+        	counter_inc(1);  // solicited
+    	} else {
+        	counter_inc(2);  // unsolicited
+	}
     } else {
-        counter_inc(2);  // unsolicited
+	counter_inc(3); // other_tcp
     }
-
     return XDP_PASS;
 }
