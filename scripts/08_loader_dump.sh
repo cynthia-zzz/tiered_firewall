@@ -4,7 +4,6 @@ set -e
 echo "--------------------------------------"
 echo "1. Rebuilding BPF program"
 echo "--------------------------------------"
-cd ~/iw
 
 clang -O2 -g -Wall -target bpf \
   -c bpf/xdp_tcp_bloom.c \

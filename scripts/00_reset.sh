@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "[*] Killing old loader"
+sudo pkill loader 2>/dev/null || true
+
 echo "[*] Detaching XDP from known interfaces (ignore errors)..."
 sudo ip link set dev vethA xdp off 2>/dev/null || true
 sudo ip link set dev vethB xdp off 2>/dev/null || true

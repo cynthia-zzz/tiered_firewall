@@ -61,7 +61,7 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 }
 
 int main(int argc, char **argv) {
-    const char *obj_path   = "bpf/xdp_tcp_bloom.o";
+    const char *obj_path = (argc > 1) ? argv[1] : "bpf/xdp_tcp_bloom.o";
     const char *pin_dir    = "/sys/fs/bpf/iw";
     const char *if_root    = "vethA";
     const char *netns_name = "nsS";
