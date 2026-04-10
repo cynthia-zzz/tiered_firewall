@@ -1,3 +1,7 @@
+// stores only a small, short-lived exact set of pending client-initiated connection>
+// client IP, server IP, client port, server port, protocol, insertion time
+// excludes payload, byte counters, packet history, long retention, full session tra>
+
 #include <linux/bpf.h>
 #include <bpf/bpf_helpers.h>
 #include <linux/if_ether.h>
@@ -25,7 +29,7 @@ struct flow5 {
  * key   = full 5-tuple
  * value = timestamp (or just a marker that the flow exists)
  *
- * This is the exact baseline firewall state table.
+ * this is the exact baseline firewall state table.
  */
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);

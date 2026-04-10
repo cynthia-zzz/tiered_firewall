@@ -3,46 +3,83 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+MODULE="${1:-bloom}"
+
+case "$MODULE" in
+  bloom)
+    OBJ="bpf/xdp_tcp_bloom.o"
+    PROG_PIN="/sys/fs/bpf/iw/xdp_tcp_bloom"
+    EXPECTED_MAPS=("bloom" "counters")
+    ;;
+  exact|exact_v2)
+    OBJ="bpf/xdp_tcp_exact_v2.o"
+    PROG_PIN="/sys/fs/bpf/iw/xdp_tcp_exact_v2"
+    EXPECTED_MAPS=("flows" "counters")
+    ;;
+  *)
+    echo "Usage: $0 [bloom|exact]"
+    exit 1
+    ;;
+esac
+
 sudo mkdir -p /sys/fs/bpf/iw
 
-# Remove old pinned objects (if present)
-sudo rm -f /sys/fs/bpf/iw/xdp_tcp_bloom /sys/fs/bpf/iw/bloom /sys/fs/bpf/iw/counters 2>/dev/null || true
+echo "[*] Removing old pinned objects..."
+sudo rm -f /sys/fs/bpf/iw/xdp_tcp_bloom \
+           /sys/fs/bpf/iw/xdp_tcp_exact_v2 \
+           /sys/fs/bpf/iw/bloom \
+           /sys/fs/bpf/iw/flows \
+           /sys/fs/bpf/iw/counters 2>/dev/null || true
 
-echo "[*] Loading and pinning program to /sys/fs/bpf/iw/xdp_tcp_bloom"
-sudo bpftool prog load bpf/xdp_tcp_bloom.o /sys/fs/bpf/iw/xdp_tcp_bloom type xdp
+echo "[*] Loading and pinning program: $OBJ -> $PROG_PIN"
+sudo bpftool prog load "$OBJ" "$PROG_PIN" type xdp
 
 echo "[*] Program pinned:"
-sudo bpftool prog show pinned /sys/fs/bpf/iw/xdp_tcp_bloom
+sudo bpftool prog show pinned "$PROG_PIN"
 
-# Extract map IDs from pinned prog info
-MAP_IDS=$(sudo bpftool prog show pinned /sys/fs/bpf/iw/xdp_tcp_bloom | sed -n 's/.*map_ids \(.*\)/\1/p' | head -n 1)
-# MAP_IDS looks like "8,7" or "14,13"
-A=$(echo "$MAP_IDS" | cut -d',' -f1 | tr -d ' ')
-B=$(echo "$MAP_IDS" | cut -d',' -f2 | tr -d ' ')
+MAP_IDS=$(sudo bpftool prog show pinned "$PROG_PIN" | sed -n 's/.*map_ids \(.*\)/\1/p' | head -n 1)
 
-echo "[*] Candidate map IDs: $A and $B"
-NAME_A=$(sudo bpftool map show id "$A" | awk '/name/{print $2; exit}')
-NAME_B=$(sudo bpftool map show id "$B" | awk '/name/{print $2; exit}')
-
-echo "[*] Map $A name=$NAME_A"
-echo "[*] Map $B name=$NAME_B"
-
-# Pin appropriately
-if [[ "$NAME_A" == "bloom" ]]; then
-  BLOOM_ID=$A
-  COUNTERS_ID=$B
-else
-  BLOOM_ID=$B
-  COUNTERS_ID=$A
+if [[ -z "${MAP_IDS:-}" ]]; then
+  echo "[!] Could not extract map IDs from pinned program info"
+  exit 1
 fi
 
-echo "[*] Pinning bloom(id=$BLOOM_ID) and counters(id=$COUNTERS_ID)"
-sudo bpftool map pin id "$BLOOM_ID" /sys/fs/bpf/iw/bloom
-sudo bpftool map pin id "$COUNTERS_ID" /sys/fs/bpf/iw/counters
+echo "[*] Candidate map IDs: $MAP_IDS"
+
+IFS=',' read -ra IDS <<< "$MAP_IDS"
+
+for raw_id in "${IDS[@]}"; do
+  ID="$(echo "$raw_id" | tr -d ' ')"
+  NAME=$(sudo bpftool map show id "$ID" | awk '/name/{print $2; exit}')
+  echo "[*] Map id=$ID name=$NAME"
+
+  case "$NAME" in
+    bloom)
+      sudo bpftool map pin id "$ID" /sys/fs/bpf/iw/bloom
+      ;;
+    flows)
+      sudo bpftool map pin id "$ID" /sys/fs/bpf/iw/flows
+      ;;
+    counters)
+      sudo bpftool map pin id "$ID" /sys/fs/bpf/iw/counters
+      ;;
+    *)
+      echo "[*] Leaving unrecognized map '$NAME' unpinned"
+      ;;
+  esac
+done
 
 echo "[*] Pinned objects:"
 sudo ls -l /sys/fs/bpf/iw
-sudo bpftool map show pinned /sys/fs/bpf/iw/bloom
-sudo bpftool map show pinned /sys/fs/bpf/iw/counters
 
-echo "[*] Done load+pin."
+for m in "${EXPECTED_MAPS[@]}"; do
+  if [[ -e "/sys/fs/bpf/iw/$m" ]]; then
+    echo "[*] Found pinned map: /sys/fs/bpf/iw/$m"
+    sudo bpftool map show pinned "/sys/fs/bpf/iw/$m"
+  else
+    echo "[!] Expected pinned map missing: /sys/fs/bpf/iw/$m"
+    exit 1
+  fi
+done
+
+echo "[*] Done load+pin for module '$MODULE'."

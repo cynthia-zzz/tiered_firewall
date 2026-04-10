@@ -1,3 +1,6 @@
+# scapy_syn_client.py
+# inserts outbound flow seed by sending SYN on vethA
+# expected result: syn seen (key 0) incremented
 from scapy.all import Ether, IP, TCP, sendp
 
 pkt = (
