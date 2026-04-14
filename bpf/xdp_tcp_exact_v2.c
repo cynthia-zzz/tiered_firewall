@@ -55,8 +55,8 @@ struct {
 } counters SEC(".maps");
 
 /*
- * Exact short-lived verifier state.
- * LRU keeps this bounded and emphasizes this is not a full flow log.
+ * Exact short-lived verifier state
+ * LRU keeps this bounded and emphasizes this is not a full flow log
  */
 struct {
     __uint(type, BPF_MAP_TYPE_LRU_HASH);
@@ -155,29 +155,23 @@ int xdp_tcp_exact(struct xdp_md *ctx)
     struct iphdr *iph;
     struct tcphdr *tcph;
     if (parse_tcp_ipv4(data, data_end, &iph, &tcph) < 0) {
-        // Not all parse failures are "bad"; most are just non-IPv4/non-TCP.
-        // Still useful to count.
+        // Not all parse failures are "bad"; most are just non-IPv4/non-TCP
+        // Still useful to count
         inc_counter(COUNTER_PARSE_ERRORS);
         return XDP_PASS;
     }
 
-    // From here on, we know this is IPv4 TCP.
-    // You can keep or remove this extra counter depending on taste.
-    // Right now it means “not some other protocol.”
-    // If you prefer, rename it later.
-    // We increment it only for successfully parsed IPv4/TCP.
-    // (The enum label is slightly legacy-ish but harmless.)
-    // Alternatively remove this line entirely.
-    // For now, leave it as a general parsed-TCP marker.
-    // If you dislike the name, rename COUNTER_NON_TCP_IPV4.
+    // From here on, we know this is IPv4 TCP; extra counter 
+    // incremented only for successfully parsed IPv4/TCP
+    // general parsed-TCP marker
     inc_counter(COUNTER_NON_TCP_IPV4);
 
     struct flow5 f = make_flow(iph, tcph);
     __u64 now = bpf_ktime_get_ns();
 
     /*
-     * Case 1: Client-initiated SYN.
-     * Store exact short-lived token.
+     * Case 1: Client-initiated SYN
+     * Store exact short-lived token
      */
     if (tcph->syn && !tcph->ack) {
         struct flow_state st = {
@@ -190,8 +184,8 @@ int xdp_tcp_exact(struct xdp_md *ctx)
     }
 
     /*
-     * Case 2: Server SYN-ACK.
-     * Verify against reverse flow.
+     * Case 2: Server SYN-ACK
+     * Verify against reverse flow
      */
     if (tcph->syn && tcph->ack) {
         struct flow5 rev = reverse_flow(f);
@@ -208,11 +202,11 @@ int xdp_tcp_exact(struct xdp_md *ctx)
             return XDP_DROP;
         }
 
-        // Verified successfully.
+        // Verified successfully
         inc_counter(COUNTER_SYNACK_VERIFIED);
 
         // Consume the token so this behaves like a one-shot verifier
-        // rather than a lingering flow record.
+        // rather than a lingering flow record
         bpf_map_delete_elem(&flows, &rev);
         inc_counter(COUNTER_FLOW_DELETED_ON_SUCCESS);
 
@@ -220,9 +214,9 @@ int xdp_tcp_exact(struct xdp_md *ctx)
     }
 
     /*
-     * All other TCP traffic passes.
+     * All other TCP traffic passes
      * This exact verifier is only about validating SYN-ACKs against
-     * recent SYNs, not maintaining broader flow telemetry.
+     * recent SYNs, not maintaining broader flow telemetry
      */
     return XDP_PASS;
 }
