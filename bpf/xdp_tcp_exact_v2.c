@@ -13,8 +13,8 @@
 char LICENSE[] SEC("license") = "GPL";
 
 /* -------------------------- CONSTANTS -------------------------- */
-// how long a SYN token remains valid for SYN-ACK verification (5 sec for now)
-#define HANDSHAKE_TTL_NS 5000000000ULL
+// how long a SYN token remains valid for SYN-ACK verification (1 min for now)
+#define HANDSHAKE_TTL_NS 60000000000ULL
 
 // bounded exact state
 #define MAX_FLOWS 16384
