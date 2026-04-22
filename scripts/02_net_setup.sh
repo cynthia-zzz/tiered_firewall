@@ -21,8 +21,8 @@ sudo ip netns exec nsS ip addr add 10.0.0.2/24 dev vethB
 sudo ip netns exec nsS ip link set vethB up
 sudo ip netns exec nsS ip link set lo up
 
-echo "[*] Routing sanity check:"
-ip route get 10.0.0.2 || true
+# echo "[*] Routing sanity check:"
+# ip route get 10.0.0.2 || true
 
 # echo "[*] Ping sanity check (should succeed):"
 # ping -c 1 -I vethA 10.0.0.2

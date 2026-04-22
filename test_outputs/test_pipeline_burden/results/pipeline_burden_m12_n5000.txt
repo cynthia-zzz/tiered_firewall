@@ -1,0 +1,6 @@
+=== Exact-layer burden metrics (delta) ===
+Bloom reject delta (key 3): 729
+Bloom maybe delta (key 4): 9271
+Exact accept delta (key 5): 0
+Exact reject delta (key 6): 9271
+Fraction of inbound candidates reaching Exact = maybe / (maybe + bloom_reject): 0.9271

@@ -1,0 +1,20 @@
+DEBUG bloom dump max key = 63, expected max key = 63
+sanity 12345->8080 = (16777226, 33554442, 14640, 36895, 6)
+
+DEBUG known inserted flow 10000->8080
+flow = (16777226, 33554442, 4135, 36895, 6)
+bits = [3552, 2011, 1818]
+  bit=3552 word=55 offset=32 present=True word_value=8534966602179827861
+  bit=2011 word=31 offset=27 present=True word_value=3108797600479197618
+  bit=1818 word=28 offset=26 present=True word_value=13178475028019646541
+
+=== Bloom attacker simulation ===
+Real flows tested: 1000
+Fake flows tested: 10000
+TP: 1000
+FP: 1366
+FN: 0
+TN: 8634
+Recall (TP rate): 1.0000
+False positive rate: 0.1366
+Attacker confidence / precision P(real | Bloom says "yes"): 0.4227

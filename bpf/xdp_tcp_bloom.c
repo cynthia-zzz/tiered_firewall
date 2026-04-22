@@ -41,7 +41,7 @@ static __always_inline __u32 flow_hash(struct flow5 *f, __u32 seed) {
 /* ------------------ BLOOM FILTER ------------------ */
 
 //#define BLOOM_BITS (1 << 18)        // 256K bits (~32KB)
-#define BLOOM_BITS (1 << 12)
+#define BLOOM_BITS (1 << 10)
 #define BLOOM_WORDS (BLOOM_BITS / 64)
 #define BLOOM_K 3
 

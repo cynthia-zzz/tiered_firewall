@@ -37,14 +37,9 @@ def main():
 
     print("=== Exact-layer burden metrics (delta) ===")
     print(f"Bloom reject delta (key 3): {bloom_reject}")
-    print(f"Bloom maybe  delta (key 4): {bloom_maybe}")
+    print(f"Bloom maybe delta (key 4): {bloom_maybe}")
     print(f"Exact accept delta (key 5): {exact_accept}")
     print(f"Exact reject delta (key 6): {exact_reject}")
-    print()
-    print(f"Exact load (number of exact lookups): {bloom_maybe}")
-    print(f"Wasted exact work (rejects): {exact_reject}")
-    print(f"Exact efficiency = accept / (accept + reject): {efficiency:.4f}")
-    print(f"Exact reject fraction = reject / (accept + reject): {reject_fraction:.4f}")
     print(f"Fraction of inbound candidates reaching Exact = maybe / (maybe + bloom_reject): {fraction_reaching_exact:.4f}")
 
 
