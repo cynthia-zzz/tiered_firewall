@@ -19,7 +19,7 @@ char LICENSE[] SEC("license") = "GPL";
 #define MAX_COUNTERS 9
 
 // #define BLOOM_BITS (1 << 15) // 32K bits (~4KB)
-#define BLOOM_BITS (1 << 14)
+#define BLOOM_BITS (1 << 12)
 #define BLOOM_WORDS (BLOOM_BITS / 64)
 #define BLOOM_K 3
 
