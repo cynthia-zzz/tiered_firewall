@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
 
     if (argc < 2) {
 	fprintf(stderr, "Usage: %s <bpf-object-file>\n", argv[0]);
-        fprintf(stderr, "Example: %s bpf/xdp_tcp_exact_v2.o\n", argv[0]);
+        fprintf(stderr, "Example: %s bpf/xdp_tcp_exact.o\n", argv[0]);
         return 1;
     }
 

@@ -1,4 +1,4 @@
-// derived from xdp_tcp_bloom.c and xdp_tcp_exact_v2.c
+// derived from xdp_tcp_bloom.c and xdp_tcp_exact.c
 
 #include <linux/bpf.h>
 #include <linux/if_ether.h>

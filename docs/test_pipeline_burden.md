@@ -5,8 +5,8 @@
 sudo ~/iw/scripts/00_reset.sh
 sudo ~/iw/scripts/01_mount_bpffs.sh
 sudo ~/iw/scripts/02_net_setup.sh
-sudo ~/iw/scripts/03_build.sh
-gcc -O2 -g -Wall ~/iw/user/loader.c -o ~/iw/user/loader -lbpf -lelf
+~/iw/scripts/03_build.sh
+make user
 sudo ~/iw/user/loader ~/iw/bpf/xdp_tcp_pipeline.o
 ```
 
