@@ -10,7 +10,7 @@ gcc -O2 -g -Wall ~/iw/user/loader.c -o ~/iw/user/loader -lbpf -lelf
 sudo ~/iw/user/loader ~/iw/bpf/xdp_tcp_pipeline.o
 ```
 
-### Test format:
+### Test Format:
 1. send n SYNs (real flows)
 2. dump and save `counters` pre-attack
 3. send 10000 invalid (wrong port) SYN-ACKs (attacker flows)
