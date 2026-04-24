@@ -1,0 +1,41 @@
+DEBUG bloom dump max key = 63, expected max key = 63
+sanity 12345->8080 = (16777226, 33554442, 14640, 36895, 6)
+
+DEBUG known inserted flow 10000->8080
+flow = (16777226, 33554442, 4135, 36895, 6)
+bits = [3552, 2011, 1818]
+  bit=3552 word=55 offset=32 present=True word_value=141733924864
+  bit=2011 word=31 offset=27 present=True word_value=9007199388958720
+  bit=1818 word=28 offset=26 present=True word_value=162692674044821568
+
+=== Bloom attacker simulation ===
+Inserted real flows in Bloom filter (n): 100
+Non-member/adversarial probes tested: 10000
+Bloom filter size (m bits): 4096
+Hash functions (k): 3
+
+--- Raw BF outcome counts ---
+TP / inserted flows returning BF+ (sanity): 100
+FN / inserted flows returning BF- (should be 0): 0
+FP / non-member probes returning BF+: 2
+TN / non-member probes returning BF-: 9998
+
+--- Functional sanity check ---
+Recall on inserted flows, Pr(BF+ | real): 1.000000
+
+--- Bloom-filter privacy/workload metrics ---
+Observed false positive rate f = Pr(BF+ | not real): 0.000200
+Analytical false positive rate (1 - exp(-kn/m))^k: 0.000352
+Exact-layer burden on non-member/adversarial probes: 0.000200
+
+--- Corrected attacker confidence ---
+Assumed attacker prior P = Pr(random guessed flow is real): 1e-06
+Corrected confidence using observed f, Pr(real | BF+): 0.004975
+Corrected confidence using analytical f, Pr(real | BF+): 0.002831
+
+--- Deprecated/comparison metric ---
+Empirical probe prior in this script, n/(n+fake_count): 0.009901
+Old TP/(TP+FP) over this artificial probe mix: 0.980392
+Note: TP/(TP+FP) is valid only as precision for this chosen probe mix;
+      it should not be reported as attacker confidence unless that mix
+      matches the attacker's real query distribution.
