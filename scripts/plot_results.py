@@ -1,137 +1,134 @@
+import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
-# Figure 1: Bloom size m vs privacy metrics (fp rate, attacker confidence)
-# fixed: n = 1000, k = 3, num of attacker flows = 10000
+import matplotx
 
-m_exponents = [10, 11, 12, 13, 14]
+# -----------------------
+# Data
+# -----------------------
+df_m = pd.DataFrame({
+    "m": [10, 11, 12, 13, 14],
+    "ε": [0.8582, 0.4570, 0.1352, 0.0296, 0.0038],
+    "AC": [0.000001, 0.000002, 0.000007, 0.000034, 0.000263],
+})
 
-# from test_bloom_configs/results/
-fp_counts_m = [8587, 4623, 1366, 266, 39]
-fake_flows_m = 10000
-fpr_m = [fp / fake_flows_m for fp in fp_counts_m]
-confidence_m = [0.1043, 0.1778, 0.4227, 0.7899, 0.9625]
+df_n = pd.DataFrame({
+    "n": [100, 500, 1000, 2000, 5000],
+    "ε": [0.0002, 0.0242, 0.1352, 0.4645, 0.9261],
+    "AC": [0.004975, 0.000041, 0.000007, 0.000002, 0.000001],
+})
 
-plt.figure(figsize=(6, 4))
-plt.plot(m_exponents, confidence_m, marker='o', label='Attacker confidence')
-plt.plot(m_exponents, fpr_m, marker='s', label='False positive rate')
-plt.xlabel('Bloom size exponent m (Bloom bits = 2^m)')
-plt.ylabel('Value')
-plt.title('Effect of Bloom Size on Privacy')
-plt.xticks(m_exponents)
-plt.ylim(0, 1.05)
-plt.legend()
-plt.tight_layout()
-plt.savefig('figure1_m_vs_privacy.png', dpi=300)
-plt.close()
+# -----------------------
+# Plot styling
+# -----------------------
+plt.rcParams.update({
+    "font.size": 12,
+    "axes.titlesize": 17,
+    "axes.labelsize": 14,
+    "xtick.labelsize": 12,
+    "ytick.labelsize": 12,
+    "legend.fontsize": 11,
+    "figure.dpi": 150,
+})
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = ['Libre Franklin'] + plt.rcParams['font.sans-serif']
 
-# Figure 2: Number of flows n vs privacy metrics (fp rate, attacker confidence)
-# fixed: m = 12, k = 3, num of attacker flows = 10000
+# -----------------------
+# Helper function
+# -----------------------
+def dual_axis_plot(df, x_col, title, x_label, tick, filename=None):
 
-n_values = [100, 500, 1000, 2000, 5000, 10000]
+    with plt.style.context(matplotx.styles.ayu["light"]):
+        fig, (ax1, ax2) = plt.subplots(nrows = 2, figsize=(6.4, 4.8))
+        # Change tick labels and tick marks to black
+        ax1.tick_params(axis='both', colors='black', labelsize=12) 
+        ax2.tick_params(axis='both', colors='black', labelsize=12)
 
-# from test_bloom_configs/results/
-fp_counts_n = [1, 235, 1366, 4687, 9262, 9974]
-fake_flows_n = 10000
-fpr_n = [fp / fake_flows_n for fp in fp_counts_n]
-confidence_n = [0.9901, 0.6803, 0.4227, 0.2970, 0.3506, 0.5007]
+        # Change spine (axis line) color to black
+        for spine in ax1.spines.values():
+            spine.set_color('black')
+        for spine in ax2.spines.values():
+            spine.set_color('black')
+            
 
-plt.figure(figsize=(6, 4))
-plt.plot(n_values, confidence_n, marker='o', label='Attacker confidence')
-plt.plot(n_values, fpr_n, marker='s', label='False positive rate')
-plt.xlabel('Number of inserted flows n')
-plt.ylabel('Value')
-plt.title('Effect of Flow Volume on Privacy')
-plt.xticks(n_values)
-plt.ylim(0, 1.05)
-plt.legend()
-plt.tight_layout()
-plt.savefig('figure2_n_vs_privacy.png', dpi=300)
-plt.close()
+        # Change label colors
+        ax1.xaxis.label.set_color('black')
+        ax1.yaxis.label.set_color('black')
+        ax1.title.set_color('black')
 
+        ax2.xaxis.label.set_color('black')
+        ax2.yaxis.label.set_color('black')
+        ax2.title.set_color('black')
 
-# Figure 3: Bloom size m vs fraction of adversarial traffic reaching exact layer
-# fixed: n = 1000, k = 3, num of attack flows = 10000
+        # Observed false positive rate
+        ax1.plot(
+            df[x_col],
+            df["ε"],
+            marker="o",
+            linewidth=2.5,
+            label="ε",
+            color = "#eec15d"
+        )
+        ax1.set_ylabel("Observed ε",color='black')
+        ax1.set_ylim(-0.05, 1.02)
+        ax1.set_xticklabels([])
+        if tick:
+            ax1.xaxis.set_major_locator(ticker.MultipleLocator(1))
 
-# from test_pipeline_burden/results/
-burden_fraction_by_m = {
-    11: 0.4633,
-    12: 0.1374,
-    13: 0.0280,
-    14: 0.0040,
-}
+        # Attacker confidence
+        ax2.plot(
+            df[x_col],
+            df["AC"],
+            marker="s",
+            linestyle="--",
+            linewidth=2.5,
+            label="AC",
+            color="#e10000" 
+        )
+        ax2.set_ylabel("AC",color='black')
+        ax2.set_yscale("log")
+        ax2.set_xlabel(x_label,color='black')
+        if tick:
+            ax2.xaxis.set_major_locator(ticker.MultipleLocator(1))
 
-m_burden = sorted(burden_fraction_by_m.keys())
-burden_fraction_m = [burden_fraction_by_m[m] for m in m_burden]
+        # Title
+        ax1.set_title(title, pad=12)
 
-plt.figure(figsize=(6, 4))
-plt.plot(m_burden, burden_fraction_m, marker='o')
-plt.xlabel('Bloom size exponent m (Bloom bits = 2^m)')
-plt.ylabel('Fraction of adversarial traffic reaching Exact')
-plt.title('Effect of Bloom Size on Exact-Layer Burden')
-plt.xticks(m_burden)
-plt.ylim(0, 1.05)
-plt.tight_layout()
-plt.savefig('figure3_m_vs_burden.png', dpi=300)
-plt.close()
+        # Combined legend
+        lines_1, labels_1 = ax1.get_legend_handles_labels()
+        lines_2, labels_2 = ax2.get_legend_handles_labels()
+        fig.legend(lines_1 + lines_2,
+            labels_1 + labels_2, ncol = 2, frameon = True, loc = "lower center", labelcolor='black')
+        fig.tight_layout(rect = [0.05,0.05, .95,.95])
+        fig.align_ylabels((ax1,ax2))
 
+        if filename:
+            plt.savefig(filename, bbox_inches="tight", dpi=300)
 
-# Figure 4: Number of flows n vs fraction of adversarial traffic reaching exact layer
-# fixed: m = 2^12, k = 3, fake attack flows = 10000
+        plt.show()
 
-# from test_pipeline_burden/results
-burden_fraction_by_n = {
-    100: 0.0002,
-    500: 0.0286,
-    1000: 0.1374,
-    2000: 0.4692,
-    5000: 0.9271,
-    10000: 0.9972,
-}
+# -----------------------
+# Graph 1: Varying Bloom filter size m
+# -----------------------
+dual_axis_plot(
+    df_m,
+    x_col="m",
+    title="Bloom Bits",
+    x_label=r"Bloom Filter Size ($2^m$ bits)",
+    filename="bloom_size_privacy_burden.png",
+    tick = True
+)
 
-n_burden = sorted(burden_fraction_by_n.keys())
-burden_fraction_n = [burden_fraction_by_n[n] for n in n_burden]
-
-plt.figure(figsize=(6, 4))
-plt.plot(n_burden, burden_fraction_n, marker='o')
-plt.xlabel('Number of inserted flows n')
-plt.ylabel('Fraction of adversarial traffic reaching Exact')
-plt.title('Effect of Flow Volume on Exact-Layer Burden')
-plt.xticks(n_burden)
-plt.ylim(0, 1.05)
-plt.tight_layout()
-plt.savefig('figure4_n_vs_burden.png', dpi=300)
-plt.close()
-
-
-# Figure 5: Attacker confidence vs fraction of adversarial traffic reaching exact layer
- 
-tradeoff_by_m = {
-    11: (0.1778, 0.4633),
-    12: (0.4227, 0.1374),
-    13: (0.7899, 0.0280),
-    14: (0.9625, 0.0040),
-}
-
-tradeoff_keys = sorted(tradeoff_by_m.keys())
-tradeoff_conf = [tradeoff_by_m[m][0] for m in tradeoff_keys]
-tradeoff_burden = [tradeoff_by_m[m][1] for m in tradeoff_keys]
-
-plt.figure(figsize=(6, 4))
-plt.plot(tradeoff_conf, tradeoff_burden, marker='o')
-for m, x, y in zip(tradeoff_keys, tradeoff_conf, tradeoff_burden):
-    plt.annotate(f"m=2^{m}", (x, y), textcoords="offset points", xytext=(4, 4))
-plt.xlabel('Attacker confidence')
-plt.ylabel('Fraction of adversarial traffic reaching Exact')
-plt.title('Privacy–Functionality Tradeoff')
-plt.xlim(0, 1.05)
-plt.ylim(0, 1.05)
-plt.tight_layout()
-plt.savefig('figure5_tradeoff.png', dpi=300)
-plt.close()
-
-print("Saved figures:")
-print("  figure1_m_vs_privacy.png")
-print("  figure2_n_vs_privacy.png")
-print("  figure3_m_vs_burden.png")
-print("  figure4_n_vs_burden.png")
-print("  figure5_tradeoff.png")
+# -----------------------
+# Graph 2: Varying number of inserted flows n
+# -----------------------
+dual_axis_plot(
+    df_n,
+    x_col="n",
+    title="Flow Volume",
+    x_label="Number of Inserted Flows (n)",
+    filename="flow_volume_privacy_burden.png",
+    tick = False
+)

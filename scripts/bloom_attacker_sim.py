@@ -1,4 +1,5 @@
 import json
+import math
 import random
 import socket
 import struct
@@ -116,10 +117,12 @@ def generate_fake_flows(real_src_ports: Set[int], count: int, dport: int = 8080)
 
 
 def main():
-    if len(sys.argv) < 5 or len(sys.argv) > 6:
+    if len(sys.argv) < 5 or len(sys.argv) > 7:
         print(
-            f"Usage: {sys.argv[0]} <bloom_dump.json> <inserted_count_n> <fake_count> <bloom_bits_m> [bloom_k]\n"
-            f"Example: {sys.argv[0]} ~/iw/test_outputs/bloom_m12_n1000.json 1000 10000 4096 3"
+            f"Usage: {sys.argv[0]} <bloom_dump.json> <inserted_count_n> <fake_count> <bloom_bits_m> [bloom_k] [attacker_prior_p]\n"
+            f"Example: {sys.argv[0]} ~/iw/test_outputs/bloom_m12_n1000.json 1000 10000 4096 3 0.000001\n\n"
+            f"attacker_prior_p is P(flow is real) for the attacker query distribution.\n"
+            f"Use a tiny value for a large flow-ID space, or 0.0026 to model 26 true member guesses per 10,000 probes."
         )
         sys.exit(1)
 
@@ -127,7 +130,12 @@ def main():
     inserted_count = int(sys.argv[2])
     fake_count = int(sys.argv[3])
     bloom_bits = int(sys.argv[4])
-    bloom_k = int(sys.argv[5]) if len(sys.argv) == 6 else 3
+    bloom_k = int(sys.argv[5]) if len(sys.argv) >= 6 else 3
+    attacker_prior_p = float(sys.argv[6]) if len(sys.argv) == 7 else 1e-6
+
+    if not (0.0 <= attacker_prior_p <= 1.0):
+        print("Error: attacker_prior_p must be between 0 and 1.")
+        sys.exit(1)
 
     if bloom_bits <= 0 or (bloom_bits & (bloom_bits - 1)) != 0:
         print("Error: bloom_bits must be a positive power of two.")
@@ -160,20 +168,79 @@ def main():
     fn = inserted_count - tp
     tn = fake_count - fp
 
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    fpr = fp / fake_count if fake_count > 0 else 0.0
+    # ---------------------------------------------------------------------
+    # Updated metrics
+    # ---------------------------------------------------------------------
+    # For a standard Bloom filter, inserted/real flows should always return
+    # "maybe" unless there is an implementation mismatch. This TP/recall
+    # check is therefore mainly a sanity check, not a privacy metric.
     recall = tp / inserted_count if inserted_count > 0 else 0.0
 
+    # False-positive behavior over non-member probes. This is the central BF
+    # measurement for privacy and exact-layer workload.
+    observed_fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
+
+    # Analytical Bloom-filter false positive rate for comparison.
+    analytical_fpr = (1.0 - math.exp(-bloom_k * inserted_count / bloom_bits)) ** bloom_k
+
+    # System cost: for adversarial/non-member probes, this is the fraction of
+    # traffic that passes the approximate BF layer and must be checked by the
+    # exact verifier.
+    exact_layer_burden = observed_fpr
+
+    # Corrected attacker confidence: posterior probability that a queried flow
+    # actually exists after the Bloom filter returns "maybe".
+    #
+    #     Pr(real | BF+) = P / (P + (1-P) f)
+    #
+    # P is NOT learned from the Bloom filter alone. It is the attacker/prior
+    # query base rate: the fraction of guessed flow identifiers that are real.
+    # In realistic flow-ID spaces this should be tiny.
+    def posterior_confidence(prior_p: float, fpr: float) -> float:
+        denom = prior_p + (1.0 - prior_p) * fpr
+        return prior_p / denom if denom > 0 else 0.0
+
+    corrected_confidence_observed = posterior_confidence(attacker_prior_p, observed_fpr)
+    corrected_confidence_analytical = posterior_confidence(attacker_prior_p, analytical_fpr)
+
+    # This is the old metric. It is retained only as an experimental precision
+    # for the artificial probe mixture used by this script. It is not a stable
+    # privacy metric because it changes if we choose to test more or fewer real
+    # flows, even when the Bloom filter itself is unchanged.
+    empirical_probe_precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    empirical_probe_prior = inserted_count / (inserted_count + fake_count) if (inserted_count + fake_count) > 0 else 0.0
+
     print("\n=== Bloom attacker simulation ===")
-    print(f"Real flows tested: {inserted_count}")
-    print(f"Fake flows tested: {fake_count}")
-    print(f"TP: {tp}")
-    print(f"FP: {fp}")
-    print(f"FN: {fn}")
-    print(f"TN: {tn}")
-    print(f"Recall (TP rate): {recall:.4f}")
-    print(f"False positive rate: {fpr:.4f}")
-    print(f'Attacker confidence / precision P(real | Bloom says "yes"): {precision:.4f}')
+    print(f"Inserted real flows in Bloom filter (n): {inserted_count}")
+    print(f"Non-member/adversarial probes tested: {fake_count}")
+    print(f"Bloom filter size (m bits): {bloom_bits}")
+    print(f"Hash functions (k): {bloom_k}")
+
+    print("\n--- Raw BF outcome counts ---")
+    print(f"TP / inserted flows returning BF+ (sanity): {tp}")
+    print(f"FN / inserted flows returning BF- (should be 0): {fn}")
+    print(f"FP / non-member probes returning BF+: {fp}")
+    print(f"TN / non-member probes returning BF-: {tn}")
+
+    print("\n--- Functional sanity check ---")
+    print(f"Recall on inserted flows, Pr(BF+ | real): {recall:.6f}")
+
+    print("\n--- Bloom-filter privacy/workload metrics ---")
+    print(f"Observed false positive rate f = Pr(BF+ | not real): {observed_fpr:.6f}")
+    print(f"Analytical false positive rate (1 - exp(-kn/m))^k: {analytical_fpr:.6f}")
+    print(f"Exact-layer burden on non-member/adversarial probes: {exact_layer_burden:.6f}")
+
+    print("\n--- Corrected attacker confidence ---")
+    print(f"Assumed attacker prior P = Pr(random guessed flow is real): {attacker_prior_p:.12g}")
+    print(f"Corrected confidence using observed f, Pr(real | BF+): {corrected_confidence_observed:.6f}")
+    print(f"Corrected confidence using analytical f, Pr(real | BF+): {corrected_confidence_analytical:.6f}")
+
+    print("\n--- Deprecated/comparison metric ---")
+    print(f"Empirical probe prior in this script, n/(n+fake_count): {empirical_probe_prior:.6f}")
+    print(f"Old TP/(TP+FP) over this artificial probe mix: {empirical_probe_precision:.6f}")
+    print("Note: TP/(TP+FP) is valid only as precision for this chosen probe mix;")
+    print("      it should not be reported as attacker confidence unless that mix")
+    print("      matches the attacker's real query distribution.")
 
 
 if __name__ == "__main__":
