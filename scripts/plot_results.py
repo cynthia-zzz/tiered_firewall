@@ -5,9 +5,7 @@ import matplotlib.ticker as ticker
 
 import matplotx
 
-# -----------------------
 # Data
-# -----------------------
 df_m = pd.DataFrame({
     "m": [10, 11, 12, 13, 14],
     "ε": [0.8582, 0.4570, 0.1352, 0.0296, 0.0038],
@@ -20,9 +18,7 @@ df_n = pd.DataFrame({
     "AC": [0.004975, 0.000041, 0.000007, 0.000002, 0.000001],
 })
 
-# -----------------------
 # Plot styling
-# -----------------------
 plt.rcParams.update({
     "font.size": 12,
     "axes.titlesize": 17,
@@ -35,25 +31,20 @@ plt.rcParams.update({
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = ['Libre Franklin'] + plt.rcParams['font.sans-serif']
 
-# -----------------------
-# Helper function
-# -----------------------
+
+# Helper functions
 def dual_axis_plot(df, x_col, title, x_label, tick, filename=None):
 
     with plt.style.context(matplotx.styles.ayu["light"]):
         fig, (ax1, ax2) = plt.subplots(nrows = 2, figsize=(6.4, 4.8))
-        # Change tick labels and tick marks to black
         ax1.tick_params(axis='both', colors='black', labelsize=12) 
         ax2.tick_params(axis='both', colors='black', labelsize=12)
 
-        # Change spine (axis line) color to black
         for spine in ax1.spines.values():
             spine.set_color('black')
         for spine in ax2.spines.values():
             spine.set_color('black')
-            
 
-        # Change label colors
         ax1.xaxis.label.set_color('black')
         ax1.yaxis.label.set_color('black')
         ax1.title.set_color('black')
@@ -109,9 +100,7 @@ def dual_axis_plot(df, x_col, title, x_label, tick, filename=None):
 
         plt.show()
 
-# -----------------------
 # Graph 1: Varying Bloom filter size m
-# -----------------------
 dual_axis_plot(
     df_m,
     x_col="m",
@@ -121,9 +110,7 @@ dual_axis_plot(
     tick = True
 )
 
-# -----------------------
-# Graph 2: Varying number of inserted flows n
-# -----------------------
+# Graph 2: Varying flow volume n
 dual_axis_plot(
     df_n,
     x_col="n",
