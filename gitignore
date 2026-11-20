@@ -1,0 +1,12 @@
+# build artifacts
+*.o
+user/loader
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# editor / OS
+.DS_Store
+.vscode/

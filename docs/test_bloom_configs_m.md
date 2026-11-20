@@ -2,12 +2,12 @@
 ---
 ### Environment Setup (must rerun for every test):
 ```
-sudo ~/iw/scripts/00_reset.sh
-sudo ~/iw/scripts/01_mount_bpffs.sh
-sudo ~/iw/scripts/02_net_setup.sh
-~/iw/scripts/03_build.sh
+sudo ~/scripts/00_reset.sh
+sudo ~/scripts/01_mount_bpffs.sh
+sudo ~/scripts/02_net_setup.sh
+~/scripts/03_build.sh
 make user
-sudo ~/iw/user/loader ~/iw/bpf/xdp_tcp_bloom.o
+sudo ~/user/loader ~/bpf/xdp_tcp_bloom.o
 ```
 
 ### Test Setup and Format:
@@ -18,20 +18,20 @@ sudo ~/iw/user/loader ~/iw/bpf/xdp_tcp_bloom.o
 
 ### m = 2^10, n = 1000
 ```
-sudo python3 ~/iw/scripts/scapy_syn_client_batch.py 10000 1000 8080
-sudo bpftool map dump pinned /sys/fs/bpf/iw/bloom > ~/iw/test_outputs/test_bloom_configs/bloom_m10_n1000.json
+sudo python3 ~/scripts/scapy_syn_client_batch.py 10000 1000 8080
+sudo bpftool map dump pinned /sys/fs/bpf/iw/bloom > ~/test_outputs/test_bloom_configs/bloom_m10_n1000.json
 
-python3 ~/iw/scripts/bloom_attacker_sim.py \
-  ~/iw/test_outputs/test_bloom_configs/bloom_m10_n1000.json \
+python3 ~/scripts/bloom_attacker_sim.py \
+  ~/test_outputs/test_bloom_configs/bloom_m10_n1000.json \
   1000 \
   10000 \
   1024 \
-  3 | tee ~/iw/test_outputs/test_bloom_configs/results/bloom_sim_m10_n1000.txt
+  3 | tee ~/test_outputs/test_bloom_configs/results/bloom_sim_m10_n1000.txt
 ```
 
 ### m = 2^11, n = 1000
 ```
-sudo python3 ~/iw/scripts/scapy_syn_client_batch.py 10000 1000 8080
+sudo python3 ~/scripts/scapy_syn_client_batch.py 10000 1000 8080
 sudo bpftool map dump pinned /sys/fs/bpf/iw/bloom > ~/iw/test_outputs/test_bloom_configs/bloom_m11_n1000.json
 
 python3 ~/iw/scripts/bloom_attacker_sim.py \
